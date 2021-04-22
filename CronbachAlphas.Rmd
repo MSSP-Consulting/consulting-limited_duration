@@ -1,0 +1,365 @@
+---
+title: "Cronbach alphas"
+author: "Bruce Mallory"
+date: "4/22/2021"
+output: pdf_document
+---
+
+For each of the question groupings that you have given us, we have:  
+  
+1) Reversed the scores for the questions that you identified.  
+  
+2) Within each question-group we have created a correlation matrix of those questions.  Because you reversed the scores for questions, all of the correlations are positive.  Within the correlation matrix you can see the pairs of questions that have the highest correlation.  (Reminder: A correlation score of 1.0 is a perfect correlation between two questions.  A correlation score of 0.0 says that there is no correlation between two questions.  In group1, you can see that the highest correlation between questions is between Q6: Tchr_uses_trgt_lang_90prct and Q12: Tchr_DOESNOT_use_Eng_as_prmy_lng).  
+  
+3) Within each question-group we have calculated the Cronbach's alpha.  Cronbach's alpha (or the "coefficient alpha") measures the internal consistency within a group of questions.  It, like correlation, also ranges between 0 and 1.  And in the social sciences, the following table gives the most widely used interpretation of a Cronbach alpha score.  If you wish to learn more about Cronbach's alpha, the following is a useful link: [https://data.library.virginia.edu/using-and-interpreting-cronbachs-alpha/](https://data.library.virginia.edu/using-and-interpreting-cronbachs-alpha/)  
+  
+![Common Cronbach alpha interpretation]("C_alpha_interpretation.png")  
+  
+4) There are other measures of internal consistency for survey questions, and recent work is pointing to the use of a measure called McDonald's omega.  If you wish to learn more about McDonald's omega, the following is a useful link: [https://personality-project.org/r/psych/HowTo/omega.pdf](https://personality-project.org/r/psych/HowTo/omega.pdf)  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(plyr)
+library(tidyverse)
+library(readxl)
+library(stringi)
+library(psy)
+library(psych)
+```
+
+```{r warning=FALSE, message=FALSE, comment=NA}
+#read file
+
+data_fpath <- file.path(
+  "data", 
+  "World Language Programming Survey in MA - Data to MSSP 6-10-2020.xlsx"
+)
+
+first_two_rows <- read_excel(data_fpath, n_max = 1)
+
+qnums <- first_two_rows %>%
+  names() %>%
+  janitor::make_clean_names()
+
+qnames <- first_two_rows %>%
+  flatten_chr()
+
+data <- read_excel(data_fpath, skip = 2, col_names = qnames) %>%
+  arrange(`End Date`) %>%
+  mutate(response_num = row_number()) %>%
+  rename(district =
+           starts_with("Please select your school district"),
+         languages_taught =
+           matches("Which languages do you currently teach.+ choice$"))
+
+data_clean_names <- data %>%
+  janitor::clean_names()
+
+#keep columns that I will use
+Groups <- data_clean_names[,1602:1636]
+```
+# GROUP 1  
+## Q6: Teachers use the target language in the classroom 90% or more of the time.  
+## Q12: Teachers use English as the primary language of instruction in the classroom.  
+## Q32: Students use the target language during assessments.  
+## Q35: Students use English during assessments.  
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group1 <- Groups[,c(6,12,32,35)]
+group1 <- group1[complete.cases(group1),]
+names(group1) <- c("Tchr_uses_trgt_lang_90prcnt",
+                   "Tchr_DOESNOT_uses_Eng_as_prmry_lng",
+                   "Stdnts_use_trgt_lang_for_assmnt",
+                   "Stdnts_DONOT_use_Eng_for_assmnt")
+
+group1$Tchr_uses_trgt_lang_90prcnt %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group1$Tchr_DOESNOT_uses_Eng_as_prmry_lng %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group1$Stdnts_use_trgt_lang_for_assmnt %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+ group1$Stdnts_DONOT_use_Eng_for_assmnt  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group1)
+cat("\n")
+cat("Cronbach Alpha = ", round(cronbach(group1)$alpha,3))
+```
+
+# GROUP 2  
+## Q8:   
+## Q9:   
+## Q15: 
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group2 <- Groups[,c(8,9,15)]
+group2 <- group2[complete.cases(group2),]
+names(group2) <- c("Tchr_uses_PACE_for_grmr",
+                   "Tchr_DOESNOT_crrct_stdnt_errs",
+                   "Tchr_DOESNOT_drctly_tch_grmr")
+
+#need to modify rest of this chunk...
+group1$Tchr_uses_trgt_lang_90prcnt %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group1$Tchr_DOESNOT_uses_Eng_as_prmry_lng %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group1$Stdnts_use_trgt_lang_for_assmnt %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+ group1$Stdnts_DONOT_use_Eng_for_assmnt  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group1)
+cat("\n")
+cat("Cronbach Alpha = ", round(cronbach(group1)$alpha,3))
+```
+
+# GROUP 3  
+## Q6:   
+## Q17:   
+## Q24: 
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group3 <- Groups[,c(16,17,24)]
+group3 <- group3[complete.cases(group3),]
+names(group3) <- c("Tchrs_use_IMAGE_mdl",
+                   "Tchrs_DONOT_explcty_tch_cultr",
+                   "Tchrs_use_authntc_rsrcs")
+
+#need to modify rest of this chunk...
+group1$Tchr_uses_trgt_lang_90prcnt %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group1$Tchr_DOESNOT_uses_Eng_as_prmry_lng %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group1$Stdnts_use_trgt_lang_for_assmnt %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+ group1$Stdnts_DONOT_use_Eng_for_assmnt  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group1)
+cat("\n")
+cat("Cronbach Alpha = ", round(cronbach(group1)$alpha,3))
+```
+
+# GROUP 4  
+## Q1:   
+## Q2:   
+## Q3: 
+## Q4:   
+## Q10:   
+## Q18: 
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group4 <- Groups[,c(1,2,3,4,10,18)]
+group4 <- group4[complete.cases(group4),]
+names(group4) <- c("Txtbks_usd_as_crclm",
+                   "Txtbks_guide_tchrs_crte_crclm",
+                   "Dstrc_DOESNOT_crte_crclm_unts",
+                   "Tchrs_DONOT_crte_own_crclm",
+                   "Tchrs_DONOT_BckwdDsgn_crclm",
+                   "Tchrs_use_txtbk_actvts")
+
+#need to modify rest of this chunk...
+group1$Tchr_uses_trgt_lang_90prcnt %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group1$Tchr_DOESNOT_uses_Eng_as_prmry_lng %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group1$Stdnts_use_trgt_lang_for_assmnt %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+ group1$Stdnts_DONOT_use_Eng_for_assmnt  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group1)
+cat("\n")
+cat("Cronbach Alpha = ", round(cronbach(group1)$alpha,3))
+```
+
+# GROUP 5  
+## Q25:   
+## Q26:   
+## Q27: 
+## Q28:   
+## Q19:   
+## Q20: 
+## Q23:   
+## Q24:
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group5 <- Groups[,c(25,26,27,28,19,20,23,24)]
+group5 <- group5[complete.cases(group5),]
+names(group5) <- c("Tchrs_use_rdng/lstng_assmnts",
+                   "Tchrs_use_wrtng/spkng_assmnts",
+                   "Tchrs_DONOT_use_txtbk_assmnts",
+                   "Tchrs_use_rbrcs_assmnts",
+                   "Tchrs_use_spkng/lstng_assmnts",
+                   "Tchrs_use_IPAs",
+                   "Tchrs_DONOT_use_clsd_rspns_assmnts",
+                   "Tchrs_use_authntc_assmnts")
+
+
+#need to modify rest of this chunk...
+group1$Tchr_uses_trgt_lang_90prcnt %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group1$Tchr_DOESNOT_uses_Eng_as_prmry_lng %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group1$Stdnts_use_trgt_lang_for_assmnt %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+ group1$Stdnts_DONOT_use_Eng_for_assmnt  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group1)
+cat("\n")
+cat("Cronbach Alpha = ", round(cronbach(group1)$alpha,3))
+```
+
+# GROUP 6  
+## Q14:   
+## Q13:   
+## Q22: 
+## Q29:   
+## Q21:
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group6 <- Groups[,c(14,13,22,29,21)]
+group6 <- group6[complete.cases(group6),]
+names(group6) <- c("Tchrs_use_CnDo_stmnts",
+                   "Tchrs_use_lrng_objcts",
+                   "Tchrs_use_extnl_assmnts",
+                   "Tchrs_use_prfcncy_trgts",
+                   "Tchrs_give_wrttn/orl_fdbk")
+
+#need to modify rest of this chunk...
+group1$Tchr_uses_trgt_lang_90prcnt %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group1$Tchr_DOESNOT_uses_Eng_as_prmry_lng %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group1$Stdnts_use_trgt_lang_for_assmnt %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+ group1$Stdnts_DONOT_use_Eng_for_assmnt  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group1)
+cat("\n")
+cat("Cronbach Alpha = ", round(cronbach(group1)$alpha,3))
+```
+
+# GROUP 7  
+## Q11:   
+## Q30:   
+## Q31: 
+## Q33:   
+## Q34:
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group7 <- Groups[,c(11,30,31,33,34)]
+group7 <- group7[complete.cases(group7),]
+names(group7) <- c("Tchrs_use_cmmnctv_actvts",
+                   "Stdnts_use_trgt_lng_w_tchr",
+                   "Stdnts_use_trgt_lng_w_stdnts",
+                   "Stdnts_DONOT_use_Eng_w_tchr",
+                   "Stdnts_DONOT_use_Eng_w_stdnts")
+
+#need to modify rest of this chunk...
+group1$Tchr_uses_trgt_lang_90prcnt %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group1$Tchr_DOESNOT_uses_Eng_as_prmry_lng %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group1$Stdnts_use_trgt_lang_for_assmnt %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+ group1$Stdnts_DONOT_use_Eng_for_assmnt  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group1)
+cat("\n")
+cat("Cronbach Alpha = ", round(cronbach(group1)$alpha,3))
+```
