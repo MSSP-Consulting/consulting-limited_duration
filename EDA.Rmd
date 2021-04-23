@@ -16,23 +16,7 @@ library(stringi)
 ```
 
 
-1. Demographic data of respondents (INCLUDE only those who selected Public School)
- a. World Language Teacher or Administrator
- b. Language(s) Taught
- c. Level(s) Taught (elem, middle, high)
-
-2. Response to question: Has your school or district established proficiency targets for each of the levels of world language study? 
- a. This is asked in the Outcome section for elem, middle, and high
- b. Please report on the response by level
-
-3. Internal Consistency of Teacher Practices:  start from 1610
- a. Check the internal consistency of scores in the Teacher Practices section
-  i. Cronbach Alpha coefficient
-  ii. See spreadsheet for sub-scales
-  iii. Please note certain items need to be reversed when checking for internal consistency (these are noted as “negative” in the spreadsheet)
-
-
-```{r}
+```{r, message = FALSE, echo = FALSE}
 #read file
 
 data_fpath <- file.path(
@@ -65,7 +49,7 @@ data <- data_clean_names[,c(9:11, 13)]
 ```
 
 
-```{r}
+```{r, echo = FALSE}
 #add clean_title(administrator/teacher) column
 
 # some titles are hard to determine: "specialist", "liaison" "supervisor"
@@ -88,14 +72,28 @@ Title.df <- data.frame(table(data$clean_title))
 colnames(Title.df) <- c("Title","Count")
 ```
 
-#1.a
-```{r}
+# 1. Demographic data of respondents (INCLUDE only those who selected Public School)
+ a. World Language Teacher or Administrator
+ b. Language(s) Taught
+ c. Level(s) Taught (elem, middle, high)
+ 
+## 1.a
+
+Some people showed that they are the World Language Teacher in the 'demographics your title' column, some did not show this information in this column but answered "I am the World Language Program chair/administrator/supervisor" in questions 'languages taught' and 'what level do you currently teach'. So we cleaned the data a little bit and filtered twice to make sure we get the correct title information.
+
+For the first filter, we take out people who have one of the words 'head', 'chair', 'leader', 'chairperson', 'director', 'supervisor', and 'administrator' in their title and say their title is Administrator.
+
+For the second filter, we change the title from 'Teacher' to 'Administrator' of people who only indicated they are 'Teacher' in the 'demographics your title' question but answered "I am the World Language Program chair/administrator/supervisor" in later question.
+
+Our result shows that among the 600 respondents, 20% of them are Administrator, and 80% of them are Teacher.
+
+```{r, echo = FALSE}
 #visualize title
 ggplot(Title.df, aes(x = Title, y = Count, fill = Title)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = round(Count/sum(Count),digits = 2)), vjust = 2, color= "black", size=3)
 ```
-```{r, warning = FALSE}
+```{r, warning = FALSE, echo = FALSE}
 # clean columns 'languages_taught' and 'what_level_s_do_you_currently_teach_please_check_all_that_apply'
 # remove the answer "I am a World Language Program chair/administrator/supervisor"
 
@@ -134,8 +132,18 @@ for(i in 1:nrow(data3)){
 ```
 
 
-#1.b
-```{r}
+## 1.b
+
+For the language part, we find that there are 12 unique levels of language. 
+
+Note that for those who teach several languages, they are counted as 1 in every language they teach. This is what I mean by 'aggregated' in the plot title.
+
+Here are the languages and the corresponding counts:
+
+Chinese 39, French 167, Latin 51, Spanish 380, Portuguese 17, Italian 35, Other (please specify) 7, German 11, American Sign Language (ASL) 5,
+Hebrew 1, Arabic 1, Japanese 1
+
+```{r, echo = FALSE}
 # create data frame with each kind of language and the corresponding count
 # a person will be counted as 1 in all language levels that this person taught
 
@@ -162,14 +170,18 @@ for(i in 1:nrow(data2)){
 # visualize language_taught distribution
 ggplot(language.df, aes(x = language, y = count, fill = language)) +
   geom_bar(stat = "identity", width = 0.8, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label = count), vjust = 2, color= "black", size=3) + 
+  geom_text(aes(label = count), vjust = -0.2, color= "black", size=3) + 
   theme(axis.text.x = element_text(angle = 60)) + 
   labs(title = "Languages taught by each individual - aggregated")
 ```
 
 
-#1.c
-```{r}
+## 1.c
+Same as the language, each person is counted as 1 in all levels that this person teaches. 
+
+We have 52 people teach the elementary level, 408 people teach high school level, and 174 people teach middle school level. There are also 7 people teach Higehr education level and 3 people in Adult Continuing Education level, but those are excluded for this question.
+
+```{r, echo = FALSE}
 # create data frame with teach levels (ele,mid,high) and the corresponding counts
 # a person will be counted as 1 in all levels that this person taught
 
@@ -205,8 +217,15 @@ ggplot(ele_mid_high, aes(x = level, y = count, fill = level)) +
   labs(title = "Level taught by each individual - aggregated")
 ```
 
-#2
-```{r}
+# 2. Response to question: Has your school or district established proficiency targets for each of the levels of world language study?
+ a. This is asked in the Outcome section for elem, middle, and high 
+ b. Please report on the response by level
+
+The following plots present the answers in elementary level, middle level, and high level. 
+
+We excluded the answer "Not sure".
+
+```{r, echo = FALSE}
 # For each district:
 # * If one or more administrators, include the administrator with greater progress
 # * If more than one administrators have the same progress, take the first administrator
@@ -232,10 +251,8 @@ one_per_district <- one_per_district %>% group_by(district) %>%
   filter(progress == max(progress)) %>% filter(response_num == min(response_num))
 ```
 
-#2.b
-Response to question: Has your school or district established proficiency targets for each of the levels of world language study?
 
-```{r}
+```{r, echo = FALSE}
 # distribution of responses by elementary school, middle school, and high school level
 # excluded the answer “Not sure"
 ele_targets <- data.frame(table(one_per_district$has_your_school_or_district_established_proficiency_targets_for_each_of_the_levels_of_world_language_study_249))
