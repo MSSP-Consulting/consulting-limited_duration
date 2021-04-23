@@ -2,7 +2,10 @@
 title: "EDA_consulting"
 author: "Maggie Sha"
 date: "4/15/2021"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -92,7 +95,7 @@ ggplot(Title.df, aes(x = Title, y = Count, fill = Title)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = round(Count/sum(Count),digits = 2)), vjust = 2, color= "black", size=3)
 ```
-```{r}
+```{r, warning = FALSE}
 # clean columns 'languages_taught' and 'what_level_s_do_you_currently_teach_please_check_all_that_apply'
 # remove the answer "I am a World Language Program chair/administrator/supervisor"
 
@@ -219,7 +222,7 @@ one_per_district <- data_clean_names %>%
   group_by(district) %>%
   filter(
     case_when(
-      any(is_admin && finished)  ~ is_admin,
+      any(is_admin)  ~ is_admin,
       !any(is_admin) ~ response_num == min(response_num)
     )
   ) %>%
@@ -234,7 +237,7 @@ Response to question: Has your school or district established proficiency target
 
 ```{r}
 # distribution of responses by elementary school, middle school, and high school level
-
+# excluded the answer “Not sure"
 ele_targets <- data.frame(table(one_per_district$has_your_school_or_district_established_proficiency_targets_for_each_of_the_levels_of_world_language_study_249))
 ele_targets <- ele_targets %>% filter(Var1 != "Not sure")
 colnames(ele_targets) <- c("Answer","count")
