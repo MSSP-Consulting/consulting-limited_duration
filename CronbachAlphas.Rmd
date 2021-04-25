@@ -1,8 +1,9 @@
 ---
-title: "Cronbach alphas"
-author: "Bruce Mallory"
+title: "Cronbach's alphas"
+author: "TeamA-Group3"
 date: "4/22/2021"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -13,9 +14,9 @@ For each of the question groupings that you have given us, we have:
   
 2) Within each question-group we have created a correlation matrix of those questions.  Because you reversed the scores for questions, all of the correlations are positive.  Within the correlation matrix you can see the pairs of questions that have the highest correlation.  (Reminder: A correlation score of 1.0 is a perfect correlation between two questions.  A correlation score of 0.0 says that there is no correlation between two questions.  In group1, you can see that the highest correlation between questions is between Q6: Tchr_uses_trgt_lang_90prct and Q12: Tchr_DOESNOT_use_Eng_as_prmy_lng).  
   
-3) Within each question-group we have calculated the Cronbach's alpha.  Cronbach's alpha (or the "coefficient alpha") measures the internal consistency within a group of questions.  It, like correlation, also ranges between 0 and 1.  And in the social sciences, the following table gives the most widely used interpretation of a Cronbach alpha score.  If you wish to learn more about Cronbach's alpha, the following is a useful link: [https://data.library.virginia.edu/using-and-interpreting-cronbachs-alpha/](https://data.library.virginia.edu/using-and-interpreting-cronbachs-alpha/)  
+3) Within each question-group we have calculated the Cronbach's alpha.  Cronbach's alpha (or the "coefficient alpha") measures the internal consistency within a group of questions.  It, like correlation, also ranges between 0 and 1.  And in the social sciences, the following table gives the most widely used interpretation of a Cronbach's alpha score.  If you wish to learn more about Cronbach's alpha, the following is a useful link: [https://data.library.virginia.edu/using-and-interpreting-cronbachs-alpha/](https://data.library.virginia.edu/using-and-interpreting-cronbachs-alpha/)  
   
-![Common Cronbach alpha interpretation]("C_alpha_interpretation.png")  
+![Common Cronbach's alpha interpretation]("C_alpha_interpretation.png")  
   
 4) There are other measures of internal consistency for survey questions, and recent work is pointing to the use of a measure called McDonald's omega.  If you wish to learn more about McDonald's omega, the following is a useful link: [https://personality-project.org/r/psych/HowTo/omega.pdf](https://personality-project.org/r/psych/HowTo/omega.pdf)  
 
@@ -32,8 +33,10 @@ library(psych)
 ```{r warning=FALSE, message=FALSE, comment=NA}
 #read file
 
+setwd("~/MSSP/Consulting/WorldLanguageSurvey/consulting-limited_duration")
+
 data_fpath <- file.path(
-  "C:/Users/zzdcy/Desktop/MSSP/consulting-limited_duration/WorldLanguage/ForeignLanguageProject/data", 
+  "~/MSSP/Consulting/WorldLanguageSurvey/consulting-limited_duration/data", 
   "World Language Programming Survey in MA - Data to MSSP 6-10-2020.xlsx"
 )
 
@@ -60,37 +63,44 @@ data_clean_names <- data %>%
 #keep columns that I will use
 Groups <- data_clean_names[,1602:1636]
 ```
-# GROUP 1  
-## Q6: Teachers use the target language in the classroom 90% or more of the time.  
-## Q12: Teachers use English as the primary language of instruction in the classroom.  
-## Q32: Students use the target language during assessments.  
-## Q35: Students use English during assessments.  
+
+In the following groups, the question numbers with * are the questions where the direction of the question answers was reversed so the intended meanings of the questions were all in the same direction.  
+  
+## GROUP 1  
+### Q06: Teachers use the target language in the classroom 90% or more of the time.  
+### Q12*: Teachers use English as the primary language of instruction in the classroom.  
+### Q32: Students use the target language during assessments.  
+### Q35*: Students use English during assessments.  
 
 ```{r message=FALSE, warning=FALSE, comment=NA}
 
 group1 <- Groups[,c(6,12,32,35)]
 group1 <- group1[complete.cases(group1),]
-names(group1) <- c("Tchr_uses_trgt_lang_90prcnt",
-                   "Tchr_DOESNOT_uses_Eng_as_prmry_lng",
-                   "Stdnts_use_trgt_lang_for_assmnt",
-                   "Stdnts_DONOT_use_Eng_for_assmnt")
+# names(group1) <- c("Tchr_uses_trgt_lang_90prcnt",
+#                    "Tchr_DOESNOT_uses_Eng_as_prmry_lng",
+#                    "Stdnts_use_trgt_lang_for_assmnt",
+#                    "Stdnts_DONOT_use_Eng_for_assmnt")
+names(group1) <- c("Q06",
+                   "Q12",
+                   "Q32",
+                   "Q35")
 
-group1$Tchr_uses_trgt_lang_90prcnt %<>% 
+group1$Q06 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group1$Tchr_DOESNOT_uses_Eng_as_prmry_lng %<>% 
+group1$Q12 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("5","4","3","2","1")) %>% 
   as.numeric()
 
-group1$Stdnts_use_trgt_lang_for_assmnt %<>%  
+group1$Q32 %<>%  
   mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
- group1$Stdnts_DONOT_use_Eng_for_assmnt  %<>%  
+ group1$Q35  %<>%  
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("5","4","3","2","1")) %>% 
   as.numeric()
@@ -98,67 +108,75 @@ group1$Stdnts_use_trgt_lang_for_assmnt %<>%
 cat("Correlation Matrix:\n")
 lowerCor(group1)
 cat("\n")
-cat("Cronbach Alpha = ", round(cronbach(group1)$alpha,3))
+cat("Cronbach's alpha = ", round(cronbach(group1)$alpha,3))
 ```
 
-# GROUP 2  
-## Q8: Teachers use the PACE Model to teach grammar as a concept.  
-## Q9: Teachers explicitly correct student errors.
-## Q15: Teachers explicitly teach grammar rules.
+## GROUP 2  
+### Q08: Teachers use the PACE Model to teach grammar as a concept.  
+### Q09*: Teachers explicitly correct student errors.
+### Q15*: Teachers explicitly teach grammar rules.
 
 ```{r message=FALSE, warning=FALSE, comment=NA}
+
 group2 <- Groups[,c(8,9,15)]
 group2 <- group2[complete.cases(group2),]
-names(group2) <- c("Tchr_uses_PACE_for_grmr",
-                   "Tchr_DOESNOT_crrct_stdnt_errs",
-                   "Tchr_DOESNOT_drctly_tch_grmr")
+# names(group2) <- c("Tchr_uses_PACE_for_grmr",
+#                    "Tchr_DOESNOT_crrct_stdnt_errs",
+#                    "Tchr_DOESNOT_drctly_tch_grmr")
+names(group2) <- c("Q08",
+                   "Q09",
+                   "Q15")
 
-## modified
-group2$Tchr_uses_PACE_for_grmr %<>%  
+group2$Q08 %<>%  
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group2$Tchr_DOESNOT_crrct_stdnt_errs %<>% 
+group2$Q09 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("5","4","3","2","1")) %>% 
   as.numeric()
 
-group2$Tchr_DOESNOT_drctly_tch_grmr %<>%  
+group2$Q15 %<>%  
   mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("1","2","3","4","5")) %>% 
+            to = c("5","4","3","2","1")) %>% 
   as.numeric()
 
 cat("Correlation Matrix:\n")
 lowerCor(group2)
 cat("\n")
-cat("Cronbach Alpha = ", round(cronbach(group2)$alpha,3))
+cat("Cronbach's alpha = ", round(cronbach(group2)$alpha,3))
 ```
 
-# GROUP 3  
-## Q16: Teachers use the IMAGE Model to teach cultural concepts.
-## Q17: Teachers explicitly teach cultural facts and information.
-## Q24: Teachers use authentic resources* in instruction. (*Defined as material developed by native speakers of the language for other native speakers of the language.)
+\newpage  
+
+## GROUP 3  
+### Q16: Teachers use the IMAGE Model to teach cultural concepts.
+### Q17*: Teachers explicitly teach cultural facts and information.
+### Q24: Teachers use authentic resources* in instruction. (*Defined as material developed by native speakers of the language for other native speakers of the language.)
 
 ```{r message=FALSE, warning=FALSE, comment=NA}
+
 group3 <- Groups[,c(16,17,24)]
 group3 <- group3[complete.cases(group3),]
-names(group3) <- c("Tchrs_use_IMAGE_mdl",
-                   "Tchrs_DONOT_explcty_tch_cultr",
-                   "Tchrs_use_authntc_rsrcs")
+# names(group3) <- c("Tchrs_use_IMAGE_mdl",
+#                    "Tchrs_DONOT_explcty_tch_cultr",
+#                    "Tchrs_use_authntc_rsrcs")
+names(group3) <- c("Q16",
+                   "Q17",
+                   "Q24")
 
-# modified
-group3$Tchrs_use_IMAGE_mdl %<>% 
+group3$Q16 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group3$Tchrs_DONOT_explcty_tch_cultr %<>% 
+group3$Q17 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("5","4","3","2","1")) %>% 
   as.numeric()
 
-group3$Tchrs_use_authntc_rsrcs %<>%  
+group3$Q24 %<>%  
   mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("1","2","3","4","5")) %>% 
   as.numeric()
@@ -166,223 +184,247 @@ group3$Tchrs_use_authntc_rsrcs %<>%
 cat("Correlation Matrix:\n")
 lowerCor(group3)
 cat("\n")
-cat("Cronbach Alpha = ", round(cronbach(group3)$alpha,3))
+cat("Cronbach's alpha = ", round(cronbach(group3)$alpha,3))
 ```
 
-# GROUP 4  
-## Q1: Textbooks are used as the curriculum in world language classes.
-## Q2: Textbooks guide the curriculum, but teachers primarily create their own activities.
-## Q3: District-made thematic units are used as the curriculum in world language classes.
-## Q4: Teachers create their own curriculum without departmental collaboration or guidance.
-## Q10: Teachers use Backward Design to plan curricular units.
-## Q18: Teachers use textbook-prepared activities or worksheets to engage students in learning.
+## GROUP 4  
+### Q01: Textbooks are used as the curriculum in world language classes.
+### Q02: Textbooks guide the curriculum, but teachers primarily create their own activities.
+### Q03*: District-made thematic units are used as the curriculum in world language classes.
+### Q04*: Teachers create their own curriculum without departmental collaboration or guidance.
+### Q10*: Teachers use Backward Design to plan curricular units.
+### Q18: Teachers use textbook-prepared activities or worksheets to engage students in learning.
 
 ```{r message=FALSE, warning=FALSE, comment=NA}
+
 group4 <- Groups[,c(1,2,3,4,10,18)]
 group4 <- group4[complete.cases(group4),]
-names(group4) <- c("Txtbks_usd_as_crclm",
-                   "Txtbks_guide_tchrs_crte_crclm",
-                   "Dstrc_DOESNOT_crte_crclm_unts",
-                   "Tchrs_DONOT_crte_own_crclm",
-                   "Tchrs_DONOT_BckwdDsgn_crclm",
-                   "Tchrs_use_txtbk_actvts")
+# names(group4) <- c("Txtbks_usd_as_crclm",
+#                    "Txtbks_guide_tchrs_crte_crclm",
+#                    "Dstrc_DOESNOT_crte_crclm_unts",
+#                    "Tchrs_DONOT_crte_own_crclm",
+#                    "Tchrs_DONOT_BckwdDsgn_crclm",
+#                    "Tchrs_use_txtbk_actvts")
+names(group4) <- c("Q01",
+                   "Q02",
+                   "Q03",
+                   "Q04",
+                   "Q10",
+                   "Q18")
 
-#modified
-group4$Txtbks_usd_as_crclm %<>% 
+group4$Q01 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group4$Txtbks_guide_tchrs_crte_crclm %<>% 
+group4$Q02 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("5","4","3","2","1")) %>% 
+            to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group4$Dstrc_DOESNOT_crte_crclm_unts %<>%  
+group4$Q03 %<>%  
   mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("1","2","3","4","5")) %>% 
+            to = c("5","4","3","2","1")) %>% 
   as.numeric()
 
-group4$Tchrs_DONOT_crte_own_crclm  %<>%  
+group4$Q04  %<>%  
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("5","4","3","2","1")) %>% 
   as.numeric()
 
-group4$Tchrs_DONOT_BckwdDsgn_crclm %<>%  
+group4$Q10 %<>%  
   mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("1","2","3","4","5")) %>% 
+            to = c("5","4","3","2","1")) %>% 
   as.numeric()
 
-group4$Tchrs_use_txtbk_actvts  %<>%  
+group4$Q18  %<>%  
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("5","4","3","2","1")) %>% 
+            to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
 cat("Correlation Matrix:\n")
 lowerCor(group4)
 cat("\n")
-cat("Cronbach Alpha = ", round(cronbach(group4)$alpha,3))
+cat("Cronbach's alpha = ", round(cronbach(group4)$alpha,3))
 ```
 
+\newpage  
 
-# GROUP 5  
-## Q25:Teachers use Interpretive (reading/listening) performance assessments.
-## Q26:Teachers use Presentational (writing/speaking) performance assessments.
-## Q27:Teachers use textbook made tests or quizzes.
-## Q28:Teachers use performance rubrics to assess student work.
-## Q19:Teachers use Interpersonal (speaking/listening) performance assessments.
-## Q20:Teachers use Integrated Performance Assessments (IPAs).
-## Q23:Teachers assess students’ grammatical accuracy through closed response quizzes or tests.
-## Q24:Teachers use authentic resources* in assessment. (*Defined as material developed by native speakers of the language for other native speakers of the language.)
+## GROUP 5  
+### Q25:Teachers use Interpretive (reading/listening) performance assessments.
+### Q26:Teachers use Presentational (writing/speaking) performance assessments.
+### Q27*:Teachers use textbook made tests or quizzes.
+### Q28:Teachers use performance rubrics to assess student work.
+### Q19:Teachers use Interpersonal (speaking/listening) performance assessments.
+### Q20:Teachers use Integrated Performance Assessments (IPAs).
+### Q23*:Teachers assess students’ grammatical accuracy through closed response quizzes or tests.
+### Q24:Teachers use authentic resources* in assessment. (*Defined as material developed by native speakers of the language for other native speakers of the language.)
 
 ```{r message=FALSE, warning=FALSE, comment=NA}
 
 group5 <- Groups[,c(25,26,27,28,19,20,23,24)]
 group5 <- group5[complete.cases(group5),]
-names(group5) <- c("Tchrs_use_rdng_lstng_assmnts",
-                   "Tchrs_use_wrtng_spkng_assmnts",
-                   "Tchrs_DONOT_use_txtbk_assmnts",
-                   "Tchrs_use_rbrcs_assmnts",
-                   "Tchrs_use_spkng_lstng_assmnts",
-                   "Tchrs_use_IPAs",
-                   "Tchrs_DONOT_use_clsd_rspns_assmnts",
-                   "Tchrs_use_authntc_assmnts")
+# names(group5) <- c("Tchrs_use_rdng_lstng_assmnts",
+#                    "Tchrs_use_wrtng_spkng_assmnts",
+#                    "Tchrs_DONOT_use_txtbk_assmnts",
+#                    "Tchrs_use_rbrcs_assmnts",
+#                    "Tchrs_use_spkng_lstng_assmnts",
+#                    "Tchrs_use_IPAs",
+#                    "Tchrs_DONOT_use_clsd_rspns_assmnts",
+#                    "Tchrs_use_authntc_assmnts")
+names(group5) <- c("Q25",
+                   "Q26",
+                   "Q27",
+                   "Q28",
+                   "Q19",
+                   "Q20",
+                   "Q23",
+                   "Q24")
 
-
-
-group5$Tchrs_use_rdng_lstng_assmnts %<>% 
+group5$Q25 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group5$Tchrs_use_wrtng_spkng_assmnts %<>% 
+group5$Q26 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("5","4","3","2","1")) %>% 
+            to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group5$Tchrs_DONOT_use_txtbk_assmnts %<>%  
+group5$Q27 %<>%  
   mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("1","2","3","4","5")) %>% 
+            to = c("5","4","3","2","1")) %>% 
   as.numeric()
 
- group5$Tchrs_use_rbrcs_assmnts  %<>%  
+ group5$Q28  %<>%  
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("5","4","3","2","1")) %>% 
+            to = c("1","2","3","4","5")) %>% 
   as.numeric()
  
- group5$Tchrs_use_spkng_lstng_assmnts %<>% 
+ group5$Q19 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group5$Tchrs_use_IPAs %<>% 
+group5$Q20 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("5","4","3","2","1")) %>% 
+            to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group5$Tchrs_DONOT_use_clsd_rspns_assmnts %<>%  
+group5$Q23 %<>%  
   mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("1","2","3","4","5")) %>% 
+            to = c("5","4","3","2","1")) %>% 
   as.numeric()
 
- group5$Tchrs_use_authntc_assmnts  %<>%  
+ group5$Q24  %<>%  
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("5","4","3","2","1")) %>% 
+            to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
 cat("Correlation Matrix:\n")
 lowerCor(group5)
 cat("\n")
-cat("Cronbach Alpha = ", round(cronbach(group5)$alpha,3))
+cat("Cronbach's alpha = ", round(cronbach(group5)$alpha,3))
 ```
 
-# GROUP 6  
-## Q14:Teachers incorporate Can-Do statements in their lessons and/or units.
-## Q13: Teachers use learning objectives for each lesson.
-## Q22: Teachers use external assessment measures (ex. STAMP, AAPPL, ALIRA, etc.) to gauge student learning outcomes.
-## Q29:Teachers use proficiency or performance targets (ex. Novice High, Intermediate Low, etc.) to determine year-end course outcomes.
-## Q21:Teachers provide written and/or oral feedback focused on student proficiency development.
+\newpage  
+
+## GROUP 6  
+### Q14:Teachers incorporate Can-Do statements in their lessons and/or units.
+### Q13: Teachers use learning objectives for each lesson.
+### Q22: Teachers use external assessment measures (ex. STAMP, AAPPL, ALIRA, etc.) to gauge student learning outcomes.
+### Q29:Teachers use proficiency or performance targets (ex. Novice High, Intermediate Low, etc.) to determine year-end course outcomes.
+### Q21:Teachers provide written and/or oral feedback focused on student proficiency development.
 
 ```{r message=FALSE, warning=FALSE, comment=NA}
 
 group6 <- Groups[,c(14,13,22,29,21)]
 group6 <- group6[complete.cases(group6),]
-names(group6) <- c("Tchrs_use_CnDo_stmnts",
-                   "Tchrs_use_lrng_objcts",
-                   "Tchrs_use_extnl_assmnts",
-                   "Tchrs_use_prfcncy_trgts",
-                   "Tchrs_give_wrttn_orl_fdbk")
+# names(group6) <- c("Tchrs_use_CnDo_stmnts",
+#                    "Tchrs_use_lrng_objcts",
+#                    "Tchrs_use_extnl_assmnts",
+#                    "Tchrs_use_prfcncy_trgts",
+#                    "Tchrs_give_wrttn_orl_fdbk")
+names(group6) <- c("Q14",
+                   "Q13",
+                   "Q22",
+                   "Q29",
+                   "Q21")
 
-group6$Tchrs_use_CnDo_stmnts %<>% 
+group6$Q14 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group6$Tchrs_use_lrng_objcts %<>% 
+group6$Q13 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("5","4","3","2","1")) %>% 
+            to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group6$Tchrs_use_extnl_assmnts %<>%  
+group6$Q22 %<>%  
   mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
- group6$Tchrs_use_prfcncy_trgts  %<>%  
+ group6$Q29  %<>%  
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("5","4","3","2","1")) %>% 
+            to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-  group6$ Tchrs_give_wrttn_orl_fdbk %<>%  
+  group6$ Q21 %<>%  
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("5","4","3","2","1")) %>% 
+            to = c("1","2","3","4","5")) %>% 
   as.numeric()
  
 cat("Correlation Matrix:\n")
 lowerCor(group6)
 cat("\n")
-cat("Cronbach Alpha = ", round(cronbach(group6)$alpha,3))
+cat("Cronbach's alpha = ", round(cronbach(group6)$alpha,3))
 ```
 
-# GROUP 7  
-## Q11:Teachers use communicative activities to engage students in Interpersonal communication.
-## Q30:Students use the target language with the teacher during class time.
-## Q31:Students use the target language with other students during class time.
-## Q33:Students use English with the teacher during class time.
-## Q34:Students use English with other students during class time.
+## GROUP 7  
+### Q11:Teachers use communicative activities to engage students in Interpersonal communication.
+### Q30:Students use the target language with the teacher during class time.
+### Q31:Students use the target language with other students during class time.
+### Q33*:Students use English with the teacher during class time.
+### Q34*:Students use English with other students during class time.
 
 ```{r message=FALSE, warning=FALSE, comment=NA}
 
 group7 <- Groups[,c(11,30,31,33,34)]
 group7 <- group7[complete.cases(group7),]
-names(group7) <- c("Tchrs_use_cmmnctv_actvts",
-                   "Stdnts_use_trgt_lng_w_tchr",
-                   "Stdnts_use_trgt_lng_w_stdnts",
-                   "Stdnts_DONOT_use_Eng_w_tchr",
-                   "Stdnts_DONOT_use_Eng_w_stdnts")
+# names(group7) <- c("Tchrs_use_cmmnctv_actvts",
+#                    "Stdnts_use_trgt_lng_w_tchr",
+#                    "Stdnts_use_trgt_lng_w_stdnts",
+#                    "Stdnts_DONOT_use_Eng_w_tchr",
+#                    "Stdnts_DONOT_use_Eng_w_stdnts")
+names(group7) <- c("Q11",
+                   "Q30",
+                   "Q31",
+                   "Q33",
+                   "Q34")
 
-#need to modify rest of this chunk...
-group7$Tchrs_use_cmmnctv_actvts %<>% 
+group7$Q11 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group7$Stdnts_use_trgt_lng_w_tchr %<>% 
+group7$Q30 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("5","4","3","2","1")) %>% 
+            to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group7$Stdnts_use_trgt_lng_w_stdnts %<>% 
+group7$Q31 %<>% 
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("5","4","3","2","1")) %>% 
+            to = c("1","2","3","4","5")) %>% 
   as.numeric()
 
-group7$Stdnts_DONOT_use_Eng_w_tchr %<>%  
+group7$Q33 %<>%  
   mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
-            to = c("1","2","3","4","5")) %>% 
+            to = c("5","4","3","2","1")) %>% 
   as.numeric()
 
- group7$Stdnts_DONOT_use_Eng_w_stdnts  %<>%  
+ group7$Q34  %<>%  
   mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
             to = c("5","4","3","2","1")) %>% 
   as.numeric()
@@ -390,5 +432,5 @@ group7$Stdnts_DONOT_use_Eng_w_tchr %<>%
 cat("Correlation Matrix:\n")
 lowerCor(group7)
 cat("\n")
-cat("Cronbach Alpha = ", round(cronbach(group7)$alpha,3))
+cat("Cronbach's alpha = ", round(cronbach(group7)$alpha,3))
 ```
