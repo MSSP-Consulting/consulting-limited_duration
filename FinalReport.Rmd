@@ -1,0 +1,722 @@
+---
+title: "Final Report"
+author: "Maggie Sha, Bruce Mallory, Rong Li, Congyao Duan"
+date: "4/25/2021"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(plyr)
+library(tidyverse)
+library(readxl)
+library(stringi)
+library(psy)
+library(psych)
+```
+
+
+```{r, message = FALSE, echo = FALSE}
+#read file
+
+setwd("~/MSSP/Consulting/WorldLanguageSurvey/consulting-limited_duration")
+
+# data_fpath <- file.path(
+#   "data", 
+#   "World Language Programming Survey in MA - Data to MSSP 6-10-2020.xlsx"
+# )
+
+data_fpath <- file.path(
+  "~/MSSP/Consulting/WorldLanguageSurvey/consulting-limited_duration/data", 
+  "World Language Programming Survey in MA - Data to MSSP 6-10-2020.xlsx"
+)
+
+first_two_rows <- read_excel(data_fpath, n_max = 1)
+
+qnums <- first_two_rows %>%
+  names() %>%
+  janitor::make_clean_names()
+
+qnames <- first_two_rows %>%
+  flatten_chr()
+
+data <- read_excel(data_fpath, skip = 2, col_names = qnames) %>%
+  arrange(`End Date`) %>%
+  mutate(response_num = row_number()) %>%
+  rename(district =
+           starts_with("Please select your school district"),
+         languages_taught =
+           matches("Which languages do you currently teach.+ choice$"))
+
+data_clean_names <- data %>%
+  janitor::clean_names()
+
+#keep columns that I will use
+data <- data_clean_names[,c(9:11, 13)]
+```
+
+
+```{r, echo = FALSE}
+#add clean_title(administrator/teacher) column
+
+# some titles are hard to determine: "specialist", "liaison" "supervisor"
+# use answers in language_taught as the second filter
+administrator_title <- c("head", "chair", "leader", "chairperson", "director", "supervisor", "administrator")
+data$clean_title <- "Teacher"
+
+
+# create data frame with teach/administrator title and the corresponding count
+for(i in 1:nrow(data)){
+  detect <- sum(stri_detect_fixed(tolower(data$part_i_demographics_your_title)[i], administrator_title))
+  if(detect >= 1){
+    data$clean_title[i] <- "Administrator"
+  } else if(grepl("chair/administrator/supervisor", data$languages_taught[i])){
+    data$clean_title[i] <- "Administrator"
+  }
+}
+
+Title.df <- data.frame(table(data$clean_title))
+colnames(Title.df) <- c("Title","Count")
+```
+
+## Introduction
+This project is a continuation of a consulting project done by MSSP in Summer 2020.  
+
+Our client, Dr. Catherine Ritz is from the Wheelock College of Education at Boston University. Her study is for assessing learning practices and outcomes and seeks to understand the learner proficiency outcomes, programming/instructional practices, and the effect of different programming/practices on outcomes through a large-scale quantitative survey of public school (K-12) districts in Massachusetts.  This survey collected responses grouped into three categories.  
+
+**Demographics:** this includes basic information about the school and educator.  
+
+**Program Type:** this is divided into Elementary, Middle, and High subsets and includes program information and outcomes.  
+
+**Foreign Language Instruction:** Likert scale statements about instructional practices.  
+
+Although the client’s research is more extensive, her questions for us in this time-limited consulting are:
+
+**A.** Visualize the respondents by *Title* (Administrator or Teacher), *Language(s) Taught*, and *Levels Taught* (Elementary school, Middle School, or High school)
+
+**B.** Visualize the responses to the question ‘Has your school or district established proficiency targets for each of the levels of world language study?’ by level (elementary school, middle school, and high school)
+
+**C.** Check the internal consistency of scores in the Teacher Practices section by Cronbach's alpha coefficients.
+
+\newpage  
+## A.1 *Title*
+Some respondents signified that they are the world language chair in the `demographics: your title` column, some did not show this information in this column but answered "I am the World Language Program chair/administrator/supervisor" in questions `languages taught` and `what level do you currently teach`. We cleaned the data to collect up these respondents and filtered twice to make sure we get the correct title information.
+
+For the first filter, we selected people who have one of the words 'head', 'chair', 'leader', 'chairperson', 'director', 'supervisor', and 'administrator' in their title and who say their title is Administrator.
+
+For the second filter, we change the title from 'Teacher' to 'Administrator' of people who only indicated they are 'Teacher' in the 'demographics your title' question but answered "I am the World Language Program chair/administrator/supervisor" in later question.
+
+Our result shows that among the 600 respondents, 20% of them are Administrator, and 80% of them are Teacher.  
+  
+  
+```{r, echo = FALSE}
+#visualize title
+ggplot(Title.df, aes(x = Title, y = Count, fill = Title)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(Count/sum(Count),digits = 2)), vjust = 2, color= "black", size=3)
+```
+```{r, warning = FALSE, echo = FALSE}
+# clean columns 'languages_taught' and 'what_level_s_do_you_currently_teach_please_check_all_that_apply'
+# remove the answer "I am a World Language Program chair/administrator/supervisor"
+
+stat <- "I am a World Language Program chair/administrator/supervisor"
+
+data2 <- data # for language question
+data3 <- data # for level question
+
+for(i in 1:nrow(data2)){
+  detect2 <- sum(stri_detect_fixed(data2$languages_taught[i], stat))
+  if(detect2 >= 1) {
+    x <- unlist(strsplit(data2$languages_taught[i], " "))
+    data2$languages_taught[i] <- ifelse((c(x[1],x[2]) == c("I", "am")), 
+                                      str_remove(data2$languages_taught[i], "I am a World Language Program chair/administrator/supervisor"), 
+                                      str_remove(data2$languages_taught[i], ",I am a World Language Program chair/administrator/supervisor"))
+    }
+}
+  
+for(i in 1:nrow(data3)){
+  detect3 <- sum(stri_detect_fixed(data3$what_level_s_do_you_currently_teach_please_check_all_that_apply[i], stat))
+  if(detect3 >= 1) {
+    y <- unlist(strsplit(data3$what_level_s_do_you_currently_teach_please_check_all_that_apply[i], " "))
+    
+    if (c(y[1],y[2]) == c("I", "am")){
+      data3$what_level_s_do_you_currently_teach_please_check_all_that_apply[i] <- 
+        str_remove(data3$what_level_s_do_you_currently_teach_please_check_all_that_apply[i],
+                   "I am a World Language Program chair/administrator/supervisor")
+    } else{
+      data3$what_level_s_do_you_currently_teach_please_check_all_that_apply[i] <- 
+        str_remove(data3$what_level_s_do_you_currently_teach_please_check_all_that_apply[i],
+                   ",I am a World Language Program chair/administrator/supervisor")
+    }
+  }
+}
+
+```
+
+\newpage  
+## A.2 *Language(s) Taught*
+
+For the language part, we faound that there are 12 unique levels of language. 
+
+Note that for those who teach several languages, they are counted as 1 in every language they teach. This is what we mean by 'aggregated' in the plot title.
+
+Here are the languages and the corresponding counts:
+
+Chinese 39, French 167, Latin 51, Spanish 380, Portuguese 17, Italian 35, Other (please specify) 7, German 11, American Sign Language (ASL) 5,
+Hebrew 1, Arabic 1, Japanese 1  
+  
+  
+```{r, echo = FALSE}
+# create data frame with each kind of language and the corresponding count
+# a person will be counted as 1 in all language levels that this person taught
+
+language.df <- data.frame(language = character(), count = numeric())
+data2$languages_taught[data2$languages_taught ==""] <- NA
+data2 <- na.omit(data2)
+
+for(i in 1:nrow(data2)){
+  split <- unlist(strsplit(data2$languages_taught[i], ","))
+  ind <- length(split) 
+   for (j in 1:ind){
+     lan <- split[j]
+     if(!split[j] %in% language.df$language){
+       # print(i)
+       # print(split[j])
+       language.df <- rbind.data.frame(language.df, cbind.data.frame(language = lan, count = 1))
+     } else{
+       ind2 <- which(language.df$language == lan)
+       language.df[ind2,]$count <- language.df[ind2,]$count + 1
+     }
+   }
+}
+    
+# visualize language_taught distribution
+ggplot(language.df, aes(x = language, y = count, fill = language)) +
+  geom_bar(stat = "identity", width = 0.8, position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = count), vjust = -0.2, color= "black", size=3) + 
+  theme(axis.text.x = element_text(angle = 90, hjust=1),legend.position="none") +
+  labs(title = "Languages taught by each individual - aggregated")
+```
+
+\newpage  
+## A.3 *Levels Taught*
+Just as we did for language, each person is counted as 1 in all levels that this person teaches. 
+
+There were 52 people who taught at the elementary level, 408 people teach at the high school level, and 174 people teach at the middle school level. There are also 7 people who teach Higher education level and 3 people in Adult Continuing Education level, but we have excluded those respondents in this visualization. 
+  
+  
+```{r, echo = FALSE}
+# create data frame with teach levels (ele,mid,high) and the corresponding counts
+# a person will be counted as 1 in all levels that this person taught
+
+level.df <- data.frame(level = character(), count = numeric())
+data3$what_level_s_do_you_currently_teach_please_check_all_that_apply[data3$what_level_s_do_you_currently_teach_please_check_all_that_apply == ""] <- NA
+data3 <- na.omit(data3)
+
+
+for(i in 1:nrow(data3)){
+  split <- unlist(strsplit(data3$what_level_s_do_you_currently_teach_please_check_all_that_apply[i], ","))
+  ind <- length(split) 
+   for (j in 1:ind){
+     lev <- split[j]
+     if(!lev %in% level.df$level){
+       # print(i)
+       # print(split[j])
+       level.df <- rbind.data.frame(level.df, cbind.data.frame(level = lev, count = 1))
+     } else{
+       ind2 <- which(level.df$level == lev)
+       level.df[ind2,]$count <- level.df[ind2,]$count + 1
+     }
+   }
+}
+
+# only keep level = ele, mid, and high
+ele_mid_high <- level.df[c(1,2,4),]
+
+# visualize teach level distrubution
+ggplot(ele_mid_high, aes(x = level, y = count, fill = level)) +
+  geom_bar(stat = "identity", width = 0.8, position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = count), vjust = 2, color= "black", size=3) + 
+  theme(axis.text.x = element_text(angle = 20), legend.position="none") +
+  labs(title = "Level taught by each individual - aggregated")
+```
+
+\newpage  
+## B. Response to the question: *Has your school or district established proficiency targets for each of the levels of world language study?*
+
+The following plots present the answers in elementary level, middle level, and high level. 
+
+We excluded the answer "Not sure".
+
+And we have modified the selection of districts.  Last summer Ryan filtered by including all administrators who responded, and then for districts that did not have an administrator response, he selected the first teacher respondent from that districts.  In doing this, there were 180 districts represented.  But there were several districts where there was more than one administrator response.  So we have filtered to find the districts presented in the following visualization by following the following selection rules:  
+
+For each district:  
+* If one or more administrators, include the administrator with greater progress (shown in the `response_num` column)  
+* If more than one administrator has the same level of progress, take the first administrator  
+* If no admin, take the first teacher to respond to the survey  
+
+This gave us responses from 172 unique school districts.  
+  
+  
+```{r, echo = FALSE}
+
+one_per_district <- data_clean_names %>%
+  select(response_num, district, progress, duration_in_seconds, finished,
+         languages_taught,has_your_school_or_district_established_proficiency_targets_for_each_of_the_levels_of_world_language_study_249,
+         has_your_school_or_district_established_proficiency_targets_for_each_of_the_levels_of_world_language_study_742,
+         has_your_school_or_district_established_proficiency_targets_for_each_of_the_levels_of_world_language_study_1291) %>%
+  mutate(is_admin = str_detect(languages_taught,
+                               "I am a World Language Program chair")) %>%
+  group_by(district) %>%
+  filter(
+    case_when(
+      any(is_admin)  ~ is_admin,
+      !any(is_admin) ~ response_num == min(response_num)
+    )
+  ) %>%
+  ungroup()
+
+one_per_district <- one_per_district %>% group_by(district) %>%
+  filter(progress == max(progress)) %>% filter(response_num == min(response_num))
+```
+
+
+```{r, echo = FALSE, fig.height=3}
+# distribution of responses by elementary school, middle school, and high school level
+# excluded the answer “Not sure"
+ele_targets <- data.frame(table(one_per_district$has_your_school_or_district_established_proficiency_targets_for_each_of_the_levels_of_world_language_study_249))
+ele_targets <- ele_targets %>% filter(Var1 != "Not sure")
+colnames(ele_targets) <- c("Answer","count")
+
+mid_targets <- data.frame(table(one_per_district$has_your_school_or_district_established_proficiency_targets_for_each_of_the_levels_of_world_language_study_742))
+mid_targets <- mid_targets %>% filter(Var1 != "Not sure")
+colnames(mid_targets) <- c("Answer","count")
+
+high_targets <- data.frame(table(one_per_district$has_your_school_or_district_established_proficiency_targets_for_each_of_the_levels_of_world_language_study_1291))
+high_targets <- high_targets %>% filter(Var1 != "Not sure")
+colnames(high_targets) <- c("Answer","count")
+
+
+ele <- ggplot(ele_targets, aes(x = Answer, y = count, fill = Answer)) +
+  geom_bar(stat = "identity", width = 0.8, position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = count), vjust = 2, color= "black", size=3) + 
+  theme(axis.text.x=element_blank()) +
+  labs(title = "Elementary Level")
+
+mid <- ggplot(mid_targets, aes(x = Answer, y = count, fill = Answer)) +
+  geom_bar(stat = "identity", width = 0.8, position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = count), vjust = 2, color= "black", size=3) + 
+  theme(axis.text.x=element_blank(), legend.position="none") +
+  labs(title = "Middle School Level")
+
+high <- ggplot(high_targets, aes(x = Answer, y = count, fill = Answer)) +
+  geom_bar(stat = "identity", width = 0.8, position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = count), vjust = 2, color= "black", size=3) + 
+  theme(axis.text.x=element_blank(), legend.position="none") +
+  labs(title = "High School Level")
+
+ele
+```
+
+``` {r echo=FALSE, out.width="50%"}
+mid
+high
+```
+
+\newpage  
+## C. Internal consistency of question groups
+
+For each of the question groupings that you have given us, we have:  
+  
+1) Reversed the scores for the questions that you identified.  
+  
+2) Within each question-group we have created a correlation matrix of those questions.  Because you reversed the scores for questions, all of the correlations are positive.  Within the correlation matrix you can see the pairs of questions that have the highest correlation.  (Reminder: A correlation score of 1.0 is a perfect correlation between two questions.  A correlation score of 0.0 says that there is no correlation between two questions.  In group1, you can see that the highest correlation between questions is between Q6: Tchr_uses_trgt_lang_90prct and Q12: Tchr_DOESNOT_use_Eng_as_prmy_lng).  
+  
+3) Within each question-group we have calculated the Cronbach's alpha.  Cronbach's alpha (or the "coefficient alpha") measures the internal consistency within a group of questions.  It, like correlation, also ranges between 0 and 1.  And in the social sciences, the following table gives the most widely used interpretation of a Cronbach's alpha score.  If you wish to learn more about Cronbach's alpha, the following is a useful link: [https://data.library.virginia.edu/using-and-interpreting-cronbachs-alpha/](https://data.library.virginia.edu/using-and-interpreting-cronbachs-alpha/)  
+  
+![Common Cronbach's alpha interpretation]("C_alpha_interpretation.png")  
+  
+4) There are other measures of internal consistency for survey questions, and recent work is pointing to the use of a measure called McDonald's omega.  If you wish to learn more about McDonald's omega, the following is a useful link: [https://personality-project.org/r/psych/HowTo/omega.pdf](https://personality-project.org/r/psych/HowTo/omega.pdf)  
+
+
+
+```{r warning=FALSE, message=FALSE, comment=NA}
+
+#keep columns that I will use
+Groups <- data_clean_names[,1602:1636]
+```
+
+\newpage  
+In the following groups, the question numbers with * are the questions where the direction of the question answers was reversed so the intended meanings of the questions were all in the same direction.  
+  
+## GROUP 1  
+### Q06 : Teachers use the target language in the classroom 90% or more of the time.  
+### Q12*: Teachers use English as the primary language of instruction in the classroom.  
+### Q32 : Students use the target language during assessments.  
+### Q35*: Students use English during assessments.  
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group1 <- Groups[,c(6,12,32,35)]
+group1 <- group1[complete.cases(group1),]
+# names(group1) <- c("Tchr_uses_trgt_lang_90prcnt",
+#                    "Tchr_DOESNOT_uses_Eng_as_prmry_lng",
+#                    "Stdnts_use_trgt_lang_for_assmnt",
+#                    "Stdnts_DONOT_use_Eng_for_assmnt")
+names(group1) <- c("Q06",
+                   "Q12",
+                   "Q32",
+                   "Q35")
+
+group1$Q06 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group1$Q12 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group1$Q32 %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+ group1$Q35  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group1)
+cat("\n")
+cat("Cronbach's alpha = ", round(cronbach(group1)$alpha,3))
+```
+
+## GROUP 2  
+### Q08 : Teachers use the PACE Model to teach grammar as a concept.  
+### Q09*: Teachers explicitly correct student errors.
+### Q15*: Teachers explicitly teach grammar rules.
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group2 <- Groups[,c(8,9,15)]
+group2 <- group2[complete.cases(group2),]
+# names(group2) <- c("Tchr_uses_PACE_for_grmr",
+#                    "Tchr_DOESNOT_crrct_stdnt_errs",
+#                    "Tchr_DOESNOT_drctly_tch_grmr")
+names(group2) <- c("Q08",
+                   "Q09",
+                   "Q15")
+
+group2$Q08 %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group2$Q09 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group2$Q15 %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group2)
+cat("\n")
+cat("Cronbach's alpha = ", round(cronbach(group2)$alpha,3))
+```
+
+\newpage  
+
+## GROUP 3  
+### Q16 : Teachers use the IMAGE Model to teach cultural concepts.
+### Q17*: Teachers explicitly teach cultural facts and information.
+### Q24 : Teachers use authentic resources* in instruction. (*Defined as material developed by native speakers of the language for other native speakers of the language.)
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group3 <- Groups[,c(16,17,24)]
+group3 <- group3[complete.cases(group3),]
+# names(group3) <- c("Tchrs_use_IMAGE_mdl",
+#                    "Tchrs_DONOT_explcty_tch_cultr",
+#                    "Tchrs_use_authntc_rsrcs")
+names(group3) <- c("Q16",
+                   "Q17",
+                   "Q24")
+
+group3$Q16 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group3$Q17 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group3$Q24 %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group3)
+cat("\n")
+cat("Cronbach's alpha = ", round(cronbach(group3)$alpha,3))
+```
+
+## GROUP 4  
+### Q01 : Textbooks are used as the curriculum in world language classes.
+### Q02 : Textbooks guide the curriculum, but teachers primarily create their own activities.
+### Q03*: District-made thematic units are used as the curriculum in world language classes.
+### Q04*: Teachers create their own curriculum without departmental collaboration or guidance.
+### Q10*: Teachers use Backward Design to plan curricular units.
+### Q18 : Teachers use textbook-prepared activities or worksheets to engage students in learning.
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group4 <- Groups[,c(1,2,3,4,10,18)]
+group4 <- group4[complete.cases(group4),]
+# names(group4) <- c("Txtbks_usd_as_crclm",
+#                    "Txtbks_guide_tchrs_crte_crclm",
+#                    "Dstrc_DOESNOT_crte_crclm_unts",
+#                    "Tchrs_DONOT_crte_own_crclm",
+#                    "Tchrs_DONOT_BckwdDsgn_crclm",
+#                    "Tchrs_use_txtbk_actvts")
+names(group4) <- c("Q01",
+                   "Q02",
+                   "Q03",
+                   "Q04",
+                   "Q10",
+                   "Q18")
+
+group4$Q01 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group4$Q02 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group4$Q03 %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group4$Q04  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group4$Q10 %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+group4$Q18  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group4)
+cat("\n")
+cat("Cronbach's alpha = ", round(cronbach(group4)$alpha,3))
+```
+
+\newpage  
+
+## GROUP 5  
+### Q25 : Teachers use Interpretive (reading/listening) performance assessments.
+### Q26 : Teachers use Presentational (writing/speaking) performance assessments.
+### Q27*: Teachers use textbook made tests or quizzes.
+### Q28 : Teachers use performance rubrics to assess student work.
+### Q19 : Teachers use Interpersonal (speaking/listening) performance assessments.
+### Q20 : Teachers use Integrated Performance Assessments (IPAs).
+### Q23*: Teachers assess students’ grammatical accuracy through closed response quizzes or tests.
+### Q24 : Teachers use authentic resources* in assessment. (*Defined as material developed by native speakers of the language for other native speakers of the language.)
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group5 <- Groups[,c(25,26,27,28,19,20,23,24)]
+group5 <- group5[complete.cases(group5),]
+# names(group5) <- c("Tchrs_use_rdng_lstng_assmnts",
+#                    "Tchrs_use_wrtng_spkng_assmnts",
+#                    "Tchrs_DONOT_use_txtbk_assmnts",
+#                    "Tchrs_use_rbrcs_assmnts",
+#                    "Tchrs_use_spkng_lstng_assmnts",
+#                    "Tchrs_use_IPAs",
+#                    "Tchrs_DONOT_use_clsd_rspns_assmnts",
+#                    "Tchrs_use_authntc_assmnts")
+names(group5) <- c("Q25",
+                   "Q26",
+                   "Q27",
+                   "Q28",
+                   "Q19",
+                   "Q20",
+                   "Q23",
+                   "Q24")
+
+group5$Q25 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group5$Q26 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group5$Q27 %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+ group5$Q28  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+ 
+ group5$Q19 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group5$Q20 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group5$Q23 %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+ group5$Q24  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group5)
+cat("\n")
+cat("Cronbach's alpha = ", round(cronbach(group5)$alpha,3))
+```
+
+\newpage  
+
+## GROUP 6  
+### Q14: Teachers incorporate Can-Do statements in their lessons and/or units.
+### Q13: Teachers use learning objectives for each lesson.
+### Q22: Teachers use external assessment measures (ex. STAMP, AAPPL, ALIRA, etc.) to gauge student learning outcomes.
+### Q29: Teachers use proficiency or performance targets (ex. Novice High, Intermediate Low, etc.) to determine year-end course outcomes.
+### Q21: Teachers provide written and/or oral feedback focused on student proficiency development.
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group6 <- Groups[,c(14,13,22,29,21)]
+group6 <- group6[complete.cases(group6),]
+# names(group6) <- c("Tchrs_use_CnDo_stmnts",
+#                    "Tchrs_use_lrng_objcts",
+#                    "Tchrs_use_extnl_assmnts",
+#                    "Tchrs_use_prfcncy_trgts",
+#                    "Tchrs_give_wrttn_orl_fdbk")
+names(group6) <- c("Q14",
+                   "Q13",
+                   "Q22",
+                   "Q29",
+                   "Q21")
+
+group6$Q14 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group6$Q13 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group6$Q22 %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+ group6$Q29  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+  group6$ Q21 %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+ 
+cat("Correlation Matrix:\n")
+lowerCor(group6)
+cat("\n")
+cat("Cronbach's alpha = ", round(cronbach(group6)$alpha,3))
+```
+
+## GROUP 7  
+### Q11 : Teachers use communicative activities to engage students in Interpersonal communication.
+### Q30 : Students use the target language with the teacher during class time.
+### Q31 : Students use the target language with other students during class time.
+### Q33*: Students use English with the teacher during class time.
+### Q34*: Students use English with other students during class time.
+
+```{r message=FALSE, warning=FALSE, comment=NA}
+
+group7 <- Groups[,c(11,30,31,33,34)]
+group7 <- group7[complete.cases(group7),]
+# names(group7) <- c("Tchrs_use_cmmnctv_actvts",
+#                    "Stdnts_use_trgt_lng_w_tchr",
+#                    "Stdnts_use_trgt_lng_w_stdnts",
+#                    "Stdnts_DONOT_use_Eng_w_tchr",
+#                    "Stdnts_DONOT_use_Eng_w_stdnts")
+names(group7) <- c("Q11",
+                   "Q30",
+                   "Q31",
+                   "Q33",
+                   "Q34")
+
+group7$Q11 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group7$Q30 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group7$Q31 %<>% 
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("1","2","3","4","5")) %>% 
+  as.numeric()
+
+group7$Q33 %<>%  
+  mapvalues( from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+ group7$Q34  %<>%  
+  mapvalues(from = c("1 - Not at all", "2 - Rarely", "3 - Sometimes", "4 - Frequently", "5 - Always"),
+            to = c("5","4","3","2","1")) %>% 
+  as.numeric()
+
+cat("Correlation Matrix:\n")
+lowerCor(group7)
+cat("\n")
+cat("Cronbach's alpha = ", round(cronbach(group7)$alpha,3))
+```
